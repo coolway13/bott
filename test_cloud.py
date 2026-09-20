@@ -1,4 +1,6 @@
 import json
+import io
+from contextlib import redirect_stdout
 import unittest
 from datetime import datetime
 from unittest.mock import Mock, patch
@@ -9,6 +11,9 @@ import local
 
 class CloudTests(unittest.TestCase):
     def setUp(self):
+        self.output=redirect_stdout(io.StringIO())
+        self.output.__enter__()
+        self.addCleanup(self.output.__exit__,None,None,None)
         self.db=local.connect(':memory:')
         cloud.schema(self.db)
         today=str(datetime.now(ZoneInfo('America/Los_Angeles')).date())
