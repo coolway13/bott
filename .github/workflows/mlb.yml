@@ -1,0 +1,30 @@
+name: MLB predictions and Discord
+on:
+  schedule:
+    - cron: '7,22,37,52 0-6,11-23 * * *'
+    - cron: '22 7-10 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: mlb-discord-production
+  cancel-in-progress: false
+jobs:
+  update:
+    if: github.repository == 'coolway13/bott' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run tests
+        run: python -m unittest discover -q
+      - name: Refresh games, predict, and update Discord
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python cloud.py
