@@ -1,0 +1,20 @@
+[
+  {
+    "game_id": "example:phillies-mets-starter",
+    "example": true,
+    "away": "Phillies",
+    "home": "Mets",
+    "away_pitcher_era": 2.93,
+    "home_pitcher_era": 3.43,
+    "away_pitcher_fip": 3.10,
+    "home_pitcher_fip": 3.70,
+    "away_wrc_plus": 118,
+    "home_wrc_plus": 105,
+    "away_xwoba": 0.335,
+    "home_xwoba": 0.315,
+    "away_bullpen_fip": 3.55,
+    "home_bullpen_fip": 4.05,
+    "away_lineup_adjustment": 0.0,
+    "home_lineup_adjustment": -0.02
+  }
+]

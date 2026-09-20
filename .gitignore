@@ -1,0 +1,6 @@
+.airtable-token
+.env
+__pycache__/
+games.json
+data/
+.discord-webhook
