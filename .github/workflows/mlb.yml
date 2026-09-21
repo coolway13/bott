@@ -6,21 +6,22 @@ on:
     # Overnight check for late games, international starts and final scores.
     - cron: '22 7-10 * * *'
   workflow_dispatch:
-permissions:
-  contents: write
+permissions: {}
 concurrency:
   group: mlb-discord-production
   cancel-in-progress: false
 jobs:
   update:
     if: github.repository == 'coolway13/bott' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required only for the durable bot-state snapshot.
+    runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.12'
       - name: Run tests
