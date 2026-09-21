@@ -1,9 +1,18 @@
 # Credentials and private/local configuration
 .env
 .env.*
+.envrc
+.direnv/
 !.env.example
 .discord-webhook
 .airtable-token
+.token
+.tokens
+*.token
+tokens.*
+passwords.*
+secrets/
+credentials/
 *credentials*
 *secret*.json
 *secret*.yaml
@@ -22,6 +31,11 @@ id_ed25519*
 .aws/
 .config/
 config.local.*
+*.local.toml
+*.local.ini
+.vscode/
+.idea/
+*.plist
 *.local.json
 *.local.yaml
 *.local.yml

@@ -10,6 +10,10 @@ All seven historical Actions runs and zero artifacts were inventoried. All seven
 
 The Discord webhook was previously shared in this private task conversation and remains in an ignored local credential file from the original setup. This is separate from the public-repository audit. Consider rotating it in Discord and updating the existing Actions secret. No credential was rotated, deleted or newly exposed as part of the repository changes.
 
+Post-deployment verification: the hardened [GitHub run](https://github.com/coolway13/bott/actions/runs/35555775250) succeeded, including all **59 tests**. All 15 confirmed Discord delivery records were preserved, with zero unconfirmed reservations. A second full-history scan after code/workflow deployment covered **125 commits, 152 blobs and 119 compressed snapshots**, again with no matching credentials.
+
+During browser log inspection, a temporary signed read-only log-download URL appeared in browser-tool metadata. It was not a bot webhook/API token and was not committed or emitted by the bot. Further log scans suppressed URLs and contents; keep audit transcripts private.
+
 ## Changes
 
 - Pinned the two official GitHub Actions to full commit SHAs verified through their official repositories: checkout `d23441a48e516b6c34aea4fa41551a30e30af803`; setup-python `ece7cb06caefa5fff74198d8649806c4678c61a1`. Ubuntu is `ubuntu-24.04`; Python is 3.12. SHA pins need deliberate future security updates.
