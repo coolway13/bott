@@ -10,13 +10,14 @@ import sqlite3
 import sys
 import time
 from urllib.error import HTTPError
-from urllib.request import Request, urlopen
+from urllib.request import Request
+from security import urlopen
 from zoneinfo import ZoneInfo
 
 import automatic
 import discord_cards
-import kalshi
 import local
+from security import clean, protect_output
 
 
 class StateStore:
@@ -73,7 +74,7 @@ def schema(db):
 def snapshot(db):
     # Allowlist excludes local paths, configuration, webhook, logs, and metadata.
     return {'version':1, 'tables':{
-        table:[list(r) for r in db.execute('SELECT '+','.join(cols)+' FROM '+table)]
+        table:[clean(list(r)) for r in db.execute('SELECT '+','.join(cols)+' FROM '+table)]
         for table,cols in TABLES.items()}}
 
 
@@ -89,12 +90,12 @@ def restore(db, data):
 def publish(db, store, webhook, send=local.send_discord):
     destination=hashlib.sha256(webhook.encode()).hexdigest()
     today=str(datetime.now(ZoneInfo('America/Los_Angeles')).date())
-    market=db.execute("SELECT value FROM meta WHERE key='kalshi_snapshot'").fetchone()
-    market=json.loads(market[0]) if market else None
     uncertain=[]
     sent=0
     for row in list(db.execute('SELECT data FROM games ORDER BY id')):
         g=json.loads(row[0])
+        if not str(g['id']).isdigit() and not g.get('example'):
+            raise ValueError('Invalid MLB game identifier')
         if g['example']:
             continue
         key=(g['id'],destination)
@@ -113,7 +114,6 @@ def publish(db, store, webhook, send=local.send_discord):
             continue
         prediction=db.execute('SELECT * FROM predictions WHERE game_id=?',(g['id'],)).fetchone()
         embed=discord_cards.build_embed(g,dict(prediction) if prediction else None)
-        embed['fields'].insert(3,kalshi.field(g,dict(prediction) if prediction else None,market))
         digest=hashlib.sha256(json.dumps(embed,sort_keys=True).encode()).hexdigest()
         if old and old['fingerprint']==digest:
             continue
@@ -159,7 +159,6 @@ def main():
     store.restore(db)
     local.sync(db)
     result=automatic.generate(db)
-    kalshi.refresh(db)
     # Save inputs and original predictions before any external delivery.
     store.save(db)
     publish(db,store,webhook)
@@ -167,6 +166,7 @@ def main():
 
 
 if __name__=='__main__':
+    protect_output()
     try:
         main()
     except Exception as error:

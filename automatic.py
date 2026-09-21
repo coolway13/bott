@@ -3,7 +3,8 @@ from datetime import date, datetime, timedelta, timezone
 import json
 import math
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.request import Request
+from security import urlopen
 
 MODEL = 'MLB run-strength baseline v1 (untrained)'
 

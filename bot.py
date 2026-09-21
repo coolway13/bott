@@ -11,7 +11,8 @@ import time
 from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.request import Request
+from security import urlopen, protect_output
 
 ROOT = Path(__file__).resolve().parent
 TOKEN_FILE = ROOT / '.airtable-token'
@@ -116,26 +117,7 @@ class Airtable:
         self.url = f'https://api.airtable.com/v0/{BASE}/{TABLE}'
 
     def request(self, method='GET', payload=None, query=None):
-        url = self.url + ('?' + urlencode(query) if query else '')
-        body = json.dumps(payload, allow_nan=False).encode() if payload is not None else None
-        for attempt in range(3):
-            req = Request(url, data=body, method=method, headers={
-                'Authorization': 'Bearer ' + self.token,
-                'Content-Type': 'application/json',
-            })
-            try:
-                with urlopen(req, timeout=30) as response:
-                    return json.load(response)
-            except HTTPError as exc:
-                if exc.code == 429 and attempt < 2:
-                    print('Airtable rate limit reached; waiting 30 seconds.', file=sys.stderr)
-                    time.sleep(30)
-                    continue
-                raise RuntimeError(f'Airtable HTTP {exc.code}. Check token scopes, base access, and input fields. '
-                                   'If a write failed, rerun to reconcile saved Game IDs.') from None
-            except (URLError, TimeoutError, OSError):
-                # Never retry an ambiguous POST: it may already have succeeded.
-                raise RuntimeError('Network request failed. Rerun to check saved Game IDs before writing again.') from None
+        raise RuntimeError('Legacy Airtable access is disabled')
 
     def records(self):
         rows, offset = [], None
@@ -184,24 +166,10 @@ def upload(client, games):
 
 
 def get_token():
-    return os.environ.get('AIRTABLE_TOKEN', '').strip() or (
-        TOKEN_FILE.read_text().strip() if TOKEN_FILE.exists() else '')
-
+    raise RuntimeError('Legacy Airtable credentials are no longer used')
 
 def configure():
-    print('Create a token at https://airtable.com/create/tokens')
-    print('Scopes: data.records:read and data.records:write')
-    print('Base access: MLB Prediction Tracker only')
-    token = getpass.getpass('Paste token (hidden): ').strip()
-    if not token:
-        raise ValueError('Token was empty')
-    Airtable(token).request(query={'maxRecords': 1})
-    fd = os.open(TOKEN_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, 'w') as out:
-        os.fchmod(out.fileno(), 0o600)
-        out.write(token + '\n')
-    print('Connection verified. Token saved locally with owner-only permissions.')
-    print('Read access verified; write access is checked on your first upload.')
+    raise RuntimeError('File credential storage is disabled')
 
 
 def main():
@@ -228,10 +196,11 @@ def main():
             else:
                 print(json.dumps(upload(Airtable(get_token()), games)))
     except (ValueError, RuntimeError, OSError) as exc:
-        print(f'Error: {exc}', file=sys.stderr)
+        print('Operation failed; sensitive error details suppressed.', file=sys.stderr)
         return 1
     return 0
 
 
 if __name__ == '__main__':
+    protect_output()
     sys.exit(main())

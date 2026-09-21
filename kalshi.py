@@ -3,7 +3,8 @@ from datetime import datetime, timezone
 import json
 import time
 from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.request import Request
+from security import urlopen
 from zoneinfo import ZoneInfo
 
 API = 'https://external-api.kalshi.com/trade-api/v2/markets'
@@ -13,23 +14,7 @@ CODES = dict(zip(
 
 
 def fetch_markets():
-    markets=[]
-    cursor=''
-    seen=set()
-    for _ in range(20):
-        query={'series_ticker':'KXMLBGAME','status':'open','limit':200}
-        if cursor:
-            query['cursor']=cursor
-        with urlopen(Request(API+'?'+urlencode(query), headers={'User-Agent':'MLB-local-tracker/1.0'}), timeout=20) as response:
-            data=json.load(response)
-        markets.extend(data['markets'])
-        cursor=data.get('cursor','')
-        if not cursor:
-            return markets
-        if cursor in seen:
-            break
-        seen.add(cursor)
-    raise RuntimeError('Incomplete Kalshi market response')
+    raise RuntimeError('Kalshi access disabled by the external-service policy')
 
 
 def refresh(db, fetch=fetch_markets, clock=time.time):

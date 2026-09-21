@@ -4,7 +4,6 @@ import hashlib
 import json
 import time
 from zoneinfo import ZoneInfo
-from kalshi import field as kalshi_field
 
 # Team-inspired accent palette; neutral fallback for unknown teams.
 TEAM_COLORS = {
@@ -98,8 +97,6 @@ def publish(db,url,send):
     destination=hashlib.sha256(url.encode()).hexdigest()
     today=str(datetime.now(ZoneInfo('America/Los_Angeles')).date())
     count=0
-    market_row=db.execute("SELECT value FROM meta WHERE key='kalshi_snapshot'").fetchone()
-    market_snapshot=json.loads(market_row[0]) if market_row else None
     for row in list(db.execute('SELECT data FROM games ORDER BY id')):
         g=json.loads(row[0])
         if g['example']:
@@ -109,7 +106,6 @@ def publish(db,url,send):
             continue
         prediction=db.execute('SELECT probability,model,inputs,recorded FROM predictions WHERE game_id=?',(g['id'],)).fetchone()
         embed=build_embed(g,dict(prediction) if prediction else None)
-        embed['fields'].insert(3,kalshi_field(g,dict(prediction) if prediction else None,market_snapshot))
         digest=hashlib.sha256(json.dumps(embed,sort_keys=True).encode()).hexdigest()
         if old and old['fingerprint']==digest:
             continue

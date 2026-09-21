@@ -1,3 +1,5 @@
+> Security update: only MLB Stats API, Discord and GitHub state storage are enabled. Kalshi and legacy Airtable network access are disabled. Credentials are environment-only. See SECURITY-REPORT.md.
+
 # GitHub Actions deployment
 
 Target: https://github.com/coolway13/bott (public). Upload the contents of this project at repository root, including `.github/workflows/mlb.yml`. Do not upload `.discord-webhook`, `.env`, `data/`, caches, or machine-specific launchers/configuration. The cloud entry point is `cloud.py`; it exits after one cycle and does not run a web server.
@@ -27,4 +29,4 @@ Discord webhook creation has no transactional connection to GitHub state. If pos
 
 To resolve a reservation, inspect the Discord channel: if the card exists, retrieve its message ID and update the matching cloud delivery record to `sent` with that ID and an empty fingerprint; the next cycle edits it. Remove a reservation only after verifying no message was created. Save the repaired compressed snapshot on `bot-state` while the workflow is disabled, then re-enable it. Never wipe state to fix a delivery error. Changing webhook destinations intentionally creates separate cards in the new destination.
 
-No trades are placed. Kalshi comparisons remain before-fee experimental game-winner comparisons. The untrained model still excludes pitcher/lineup adjustments and does not support spreads. Predictions require sufficient prior-day regular-season stats. Existing predictions stay fixed; scores and prices refresh each scheduled cycle.
+No trades are placed. Kalshi comparisons are disabled under the external-service policy. The untrained model still excludes pitcher/lineup adjustments and does not support spreads. Predictions require sufficient prior-day regular-season stats. Existing predictions stay fixed; scores and prices refresh each scheduled cycle.

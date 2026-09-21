@@ -14,14 +14,15 @@ import threading
 import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode, urlparse
-from urllib.request import Request, urlopen
+from urllib.request import Request
+from security import urlopen
 import webbrowser
 from zoneinfo import ZoneInfo
 
 from model import calculate_probability, timestamp
 from automatic import generate
 from discord_cards import publish
-from kalshi import refresh as refresh_kalshi
+from security import clean, redact, protect_output
 
 ROOT = Path(__file__).resolve().parent
 DB = ROOT / 'data' / 'mlb.sqlite3'
@@ -231,10 +232,8 @@ def valid_hook(value):
 
 def hook_value():
     value = os.environ.get('DISCORD_WEBHOOK_URL', '').strip()
-    if not value and HOOK.exists():
-        value = HOOK.read_text().strip()
     if not value:
-        raise ValueError('Set up Discord first: ./local.sh discord-setup')
+        raise ValueError('Set DISCORD_WEBHOOK_URL in the environment (GitHub Actions Secret in production)')
     return valid_hook(value)
 
 
@@ -248,8 +247,10 @@ def send_discord(url, message, *, embed=None, message_id=None, recreate_missing=
     payload = {'content': message[:1900], 'allowed_mentions': {'parse': []}, 'username': 'MLB Local Tracker'}
     if embed:
         payload['embeds']=[embed]
+    if message_id is not None and not re.fullmatch(r'[0-9]{1,25}', str(message_id)):
+        raise ValueError('Invalid Discord message identifier')
     suffix=f'/messages/{message_id}' if message_id else '?wait=true'
-    req = Request(valid_hook(url)+suffix, data=json.dumps(payload).encode(),
+    req = Request(valid_hook(url)+suffix, data=json.dumps(clean(payload)).encode(),
                   headers={'Content-Type': 'application/json', 'User-Agent': 'LocalMLBTracker/1.0'}, method='PATCH' if message_id else 'POST')
     try:
         with urlopen(req, timeout=20) as response:
@@ -302,7 +303,6 @@ def poll(stop, path, discord):
             try:
                 sync(db, notify=bool(discord))
                 generate(db, notify=bool(discord))
-                refresh_kalshi(db)
                 if discord:
                     retry=db.execute("SELECT value FROM meta WHERE key='discord_retry_at'").fetchone()
                     if not retry or time.time()>=float(retry[0]):
@@ -314,7 +314,7 @@ def poll(stop, path, discord):
                             raise
             except Exception as e:
                 # Never log remote exception details, which may include a secret URL.
-                message = str(e) if isinstance(e, RuntimeError) else 'Refresh failed; saved data remains available.'
+                message = 'Refresh failed; saved data remains available.'
                 with db:
                     metadata(db, 'error', message)
             stop.wait(POLL)
@@ -372,7 +372,7 @@ def serve(path, port, discord=False, open_browser=False):
                 result = save_predictions(db, json.loads(self.rfile.read(length)))
                 self.reply(200, result)
             except (ValueError, KeyError, TypeError) as e:
-                self.reply(400, {'error': str(e)})
+                self.reply(400, {'error': 'Invalid prediction input.'})
             finally:
                 db.close()
     server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
@@ -411,12 +411,7 @@ def main():
         if args.command == 'serve':
             serve(args.db,args.port,args.discord,args.open)
         elif args.command == 'discord-setup':
-            value = valid_hook(getpass.getpass('Discord webhook URL (hidden): ').strip())
-            fd = os.open(HOOK, os.O_WRONLY|os.O_CREAT|os.O_TRUNC, 0o600)
-            with os.fdopen(fd,'w') as f:
-                os.fchmod(f.fileno(),0o600)
-                f.write(value+'\n')
-            print('Saved locally. No message sent. Enable with ./local.sh serve --discord --open')
+            raise ValueError('File credential storage is disabled. Use the DISCORD_WEBHOOK_URL environment variable.')
         elif args.command == 'discord-test':
             send_discord(hook_value(), 'MLB Local Tracker test: your Discord connection is working.')
             print('Test message sent.')
@@ -441,10 +436,11 @@ def main():
             with connect(args.db) as db:
                 print(json.dumps(sync(db) if args.command=='sync' else save_predictions(db,json.loads(args.file.read_text()))))
     except (ValueError, RuntimeError, OSError) as e:
-        print(str(e) if isinstance(e,(ValueError,RuntimeError)) else 'Unable to open local file, server port, or network connection.')
+        print('Operation failed; check configuration and input. Sensitive error details suppressed.')
         return 1
     return 0
 
 
 if __name__ == '__main__':
+    protect_output()
     raise SystemExit(main())
